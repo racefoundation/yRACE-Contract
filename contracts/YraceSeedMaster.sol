@@ -51,7 +51,7 @@ contract YraceSeedMaster is Ownable {
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     //Total maximum rewards from seed pool
-    uint256 public seedPoolAmount = 100000e18;
+    uint256 public seedPoolAmount;
 
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -62,12 +62,15 @@ contract YraceSeedMaster is Ownable {
     constructor(
         YraceToken _yRace,
         uint256 _rewardPerBlock,
-        uint256 _START_BLOCK
+        uint256 _START_BLOCK,
+        uint256 _END_BLOCK,
+        uint256 _seedPoolAmount
     ){
         yRace = _yRace;
         REWARD_PER_BLOCK = _rewardPerBlock;
         START_BLOCK = _START_BLOCK;
-        END_BLOCK = _START_BLOCK + 200000; // ~7 days on binance smart chain
+        END_BLOCK = _END_BLOCK;
+        seedPoolAmount = _seedPoolAmount;
     }
 
     // -------- For manage pool ---------
