@@ -336,42 +336,7 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
              assert.equal(await this.YraceToken.balanceOf(carol),'5'); 
         }) 
 
-        it('should update referral bonus properly', async () => {
-            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1400,1500,1000, { from: alice })
-            await this.YraceToken.setMaster(this.master.address, { from: alice })
- 
-            await this.master.add('100', this.lp.address, true)
-            await this.lp.approve(this.master.address, '1000', { from: alice })
-            await this.lp.approve(this.master.address, '1000', { from: bob })
-
-            await this.master.add('100', this.lp2.address, true)
-
-            await time.advanceBlockTo('1399')
-            await this.master.deposit(0, 10,carol, { from: alice }) 
-            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })        
-
-            await expectRevert(
-                this.master.updateReferralBonus(3000),
-                "YraceMaster: invalid referral bonus basis points"
-            )
-            await expectRevert(
-                this.master.updateReferralBonus(200),
-                "YraceMaster: same bonus set"
-            )
-
-            await this.master.updateReferralBonus(1000)
-
-            assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
-
-            await time.advanceBlockTo('1500')
-            await this.master.withdraw(0, { from: alice })
-            await this.master.withdraw(0, { from: bob })
-
-            assert.equal(await this.YraceToken.balanceOf(alice),'252'); 
-            assert.equal(await this.YraceToken.balanceOf(bob),'247'); 
-            assert.equal(await this.YraceToken.balanceOf(carol),'25');         
-        }) 
-
+        
         it('should not be referred by multiple referrers', async () => {
             this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1600,1700,1000, { from: alice })
             await this.YraceToken.setMaster(this.master.address, { from: alice })
@@ -390,7 +355,7 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
 
             assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
             assert.equal(await this.YraceToken.balanceOf(dev),'0');   
-            
+
             await time.advanceBlockTo('1700')
             await this.master.withdraw(0, { from: alice })
             await this.master.withdraw(0, { from: bob })
