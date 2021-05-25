@@ -277,17 +277,4 @@ contract YraceSeedMaster is Ownable {
             emit ReferralPaid(_user, referrer, refBonusEarned);
         }
     }
-
-    // Referral Bonus in 
-    // Initially set to 2%, this this the ability to increase or decrease the Bonus percentage based on
-    // community voting and feedback.
-    function updateReferralBonus(uint256 _newrefBonus) public onlyOwner {
-        require(_newrefBonus <= MAXIMUM_REFERRAL, "YraceMaster: invalid referral bonus basis points");
-        require(_newrefBonus != refBonus, "YraceMaster: same bonus set");
-        uint256 previousrefBonus = refBonus;
-        refBonus = _newrefBonus;
-        emit ReferralBonusChanged(previousrefBonus, _newrefBonus);
-    }
-
-
 }
