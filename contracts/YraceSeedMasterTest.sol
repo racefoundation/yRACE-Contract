@@ -52,10 +52,10 @@ contract YraceSeedMaster is Ownable {
     uint256 public totalAllocPoint = 0;
     //Total maximum rewards from seed pool
     uint256 public seedPoolAmount;
-    // Referral Bonus in basis points. Initially set to 2%
-    uint256 public refBonus = 200;
+    // Referral Bonus in basis points. Initially set to 2% (1% = 100 BP)
+    uint256 public refBonusBP = 200;
     // Max referral commission rate: 20%.
-    uint16 public constant MAXIMUM_REFERRAL = 2000;
+    uint16 public constant MAXIMUM_REFERRAL_BP = 2000;
     // Referral Mapping
     mapping(address => address) public referrers; // account_address -> referrer_address
     mapping(address => uint256) public referredCount; // referrer_address -> num_of_referred
@@ -126,31 +126,12 @@ contract YraceSeedMaster is Ownable {
             return;
         }
         uint256 reward = getPoolReward(pool.lastRewardBlock, block.number, pool.allocPoint); 
+        if(yRace.yRaceMaster()==address(this))
         yRace.mint(address(this), reward);
         seedPoolAmount = seedPoolAmount.sub(reward);     
         pool.rewardPerShare = pool.rewardPerShare.add(reward.mul(1e12).div(lpSupply)); //amount of yRace per token
         pool.lastRewardBlock = block.number;
     }
-
-    // //Deposit Pool tokens into master contract for yRace allocation
-    // function deposit(uint256 _pid, uint256 _amount) public {
-    //     require(block.number>=START_BLOCK,"YraceMaster: Staking period has not started");
-    //     require(block.number<END_BLOCK,"YraceMaster: Staking period has ended");
-
-    //     PoolInfo storage pool = poolInfo[_pid];
-    //     UserInfo storage user = userInfo[_pid][msg.sender];
-    //     updatePool(_pid);
-    //     if (user.amount > 0) {
-    //         uint256 pending = user.amount.mul(pool.rewardPerShare).div(1e12).sub(user.rewardDebt);
-    //         user.rewardToClaim += pending; 
-    //     }
-    //     if(_amount > 0) {
-    //         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-    //         user.amount = user.amount.add(_amount);
-    //     }
-    //     user.rewardDebt = user.amount.mul(pool.rewardPerShare).div(1e12);
-    //     emit Deposit(msg.sender, _pid, _amount);
-    // }
 
     //Deposit Pool tokens into master contract for yRace allocation with referral.
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
@@ -271,8 +252,8 @@ contract YraceSeedMaster is Ownable {
     // Pay referral commission to the referrer who referred this user.
     function payReferralCommission(address _user, uint256 _pending) internal {
         address referrer = getReferral(_user);
-        if (referrer != address(0) && referrer != _user && refBonus > 0) {
-            uint256 refBonusEarned = _pending.mul(refBonus).div(10000);
+        if (referrer != address(0) && referrer != _user && refBonusBP > 0) {
+            uint256 refBonusEarned = _pending.mul(refBonusBP).div(10000);
             yRace.mint(referrer, refBonusEarned);
             emit ReferralPaid(_user, referrer, refBonusEarned);
         }
