@@ -366,5 +366,60 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
             assert.equal(await this.YraceToken.balanceOf(dev),'0');         
         }) 
 
+        it('should allow withdraw after change of master address in token contract', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1800,1900,1000, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+             await this.master.add('100', this.lp.address, true)
+             await this.lp.approve(this.master.address, '1000', { from: alice })
+             await this.lp.approve(this.master.address, '1000', { from: bob })
+             await this.lp.approve(this.master.address, '1000', { from: carol })
+             await this.lp.approve(this.master.address, '1000', { from: dev })
+ 
+             await this.master.add('100', this.lp2.address, true)
+             await this.lp2.approve(this.master.address, '1000', { from: eliah })
+ 
+ 
+             // console.log(await time.latestBlock());
+             await time.advanceBlockTo('1799')
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: carol })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: dev })
+             await this.master.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })
+ 
+
+             await time.advanceBlockTo('1900')
+
+             await this.master.massUpdatePools();
+
+             await this.YraceToken.setMaster(bob, { from: alice })
+           // ----- claiming anytime after sale end (equal distribution)
+ 
+             await this.master.withdraw(0, { from: alice })
+             assert.equal(await this.YraceToken.balanceOf(alice),'130');
+ 
+             await this.master.withdraw(0, { from: bob })
+             assert.equal(await this.YraceToken.balanceOf(bob),'125');
+ 
+             await this.master.withdraw(0, { from: carol })
+             assert.equal(await this.YraceToken.balanceOf(carol),'123');
+ 
+             await this.master.withdraw(0, { from: dev })
+             assert.equal(await this.YraceToken.balanceOf(dev),'121');
+ 
+             await this.master.withdraw(1, { from: eliah })
+             assert.equal(await this.YraceToken.balanceOf(eliah),'480');           
+ 
+             // multiple withdraw (not OK)
+             await expectRevert(
+                 this.master.withdraw(0, { from: alice }),
+                 "YraceMaster: No tokens staked"
+             );
+             assert.notEqual(await this.master.seedPoolAmount(),'0');
+ 
+ 
+         })
+
     })
 })
