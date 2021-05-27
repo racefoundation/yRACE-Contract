@@ -398,7 +398,7 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
  
              await this.master.withdraw(0, { from: alice })
              assert.equal(await this.YraceToken.balanceOf(alice),'130');
- 
+  
              await this.master.withdraw(0, { from: bob })
              assert.equal(await this.YraceToken.balanceOf(bob),'125');
  
