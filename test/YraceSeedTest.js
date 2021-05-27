@@ -1,4 +1,4 @@
-const { expectRevert, time, BN } = require('@openzeppelin/test-helpers')
+const { expectRevert, time, constants } = require('@openzeppelin/test-helpers')
 const YraceToken = artifacts.require('YraceToken')
 const YraceSeedMaster = artifacts.require('YraceSeedMaster')
 const MockBEP20 = artifacts.require('MockBEP20')
@@ -109,14 +109,14 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
             await this.master.add('100', this.lp.address, true)
             await this.lp.approve(this.master.address, '1000', { from: bob })
 
-            await expectRevert(
-                this.master.deposit(0, '100', { from: bob }),
-                "Staking period has not started"
-            )    
+            // await expectRevert(
+            //     this.master.deposit(0, '100', { from: bob }),
+            //     "Staking period has not started"
+            // )    
 
             await time.advanceBlockTo(110);
 
-            await this.master.deposit(0, 100, { from: bob })
+            await this.master.deposit(0, 100,constants.ZERO_ADDRESS, { from: bob })
             assert.equal((await this.lp.balanceOf(bob)).valueOf(), '900')
             assert.equal((await this.lp.balanceOf(this.master.address)).valueOf(), '100')
 
@@ -125,7 +125,7 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
             assert.equal((await this.master.poolInfo(0)).rewardPerShare.valueOf(), "0")
 
             await this.lp.approve(this.master.address, '1000', { from: carol })
-            await this.master.deposit(0, 50, { from: carol })
+            await this.master.deposit(0, 50,constants.ZERO_ADDRESS, { from: carol })
             assert.equal((await this.lp.balanceOf(carol)).valueOf(), '950')
             assert.equal((await this.lp.balanceOf(this.master.address)).valueOf(), '150')
             
@@ -148,8 +148,8 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
             await this.lp.approve(this.master.address, '1000', { from: carol }) 
 
             await time.advanceBlockTo('199')            
-            await this.master.deposit(0, '10', { from: bob }) // 200
-            await this.master.deposit(0, '10', { from: carol })
+            await this.master.deposit(0, '10',constants.ZERO_ADDRESS, { from: bob }) // 200
+            await this.master.deposit(0, '10',constants.ZERO_ADDRESS, { from: carol })
             await time.advanceBlockTo('250')
 
             await expectRevert(
@@ -182,7 +182,7 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
             assert.equal((await this.YraceToken.balanceOf(bob)).valueOf(), '0')
             assert.equal((await this.YraceToken.balanceOf(dev)).valueOf(), '0')
             await time.advanceBlockTo('459')
-            await this.master.deposit(0, '10', { from: bob }) 
+            await this.master.deposit(0, '10',constants.ZERO_ADDRESS, { from: bob }) 
             assert.equal((await this.lp.balanceOf(this.master.address)).valueOf(), '10')
             assert.equal((await this.YraceToken.totalSupply()).valueOf(), 0)
             assert.equal((await this.YraceToken.balanceOf(bob)).valueOf(), '0')
@@ -210,11 +210,11 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
 
             // console.log(await time.latestBlock());
             await time.advanceBlockTo('599')
-            await this.master.deposit(0, 10, { from: alice })
-            await this.master.deposit(0, 10, { from: bob })
-            await this.master.deposit(0, 10, { from: carol })
-            await this.master.deposit(0, 10, { from: dev })
-            await this.master.deposit(1, 10, { from: eliah })
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: carol })
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: dev })
+            await this.master.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })
 
           // ----- claiming anytime after sale end (equal distribution)
 
@@ -261,11 +261,11 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
 
              // console.log(await time.latestBlock());
              await time.advanceBlockTo('799')
-             await this.master.deposit(0, 10, { from: alice })
-             await this.master.deposit(0, 20, { from: bob })
-             await this.master.deposit(0, 30, { from: carol })
-             await this.master.deposit(0, 40, { from: dev })
-             await this.master.deposit(1, 10, { from: eliah })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
+             await this.master.deposit(0, 20,constants.ZERO_ADDRESS, { from: bob })
+             await this.master.deposit(0, 30,constants.ZERO_ADDRESS, { from: carol })
+             await this.master.deposit(0, 40,constants.ZERO_ADDRESS, { from: dev })
+             await this.master.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })
  
            // ----- claiming anytime after sale end (equal distribution)
 
@@ -298,10 +298,10 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
  
              // console.log(await time.latestBlock());
              await time.advanceBlockTo('999')
-             await this.master.deposit(0, 10, { from: alice }) 
-             await this.master.deposit(0, 10, { from: bob })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice }) 
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
              await time.advanceBlockTo('1050')
-             await this.master.deposit(0, 10, { from: alice })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
 
             // ----- claiming anytime after sale end (equal distribution)
              await time.advanceBlockTo('1100')
@@ -311,6 +311,115 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, receiveInit
              await this.master.withdraw(0, { from: bob })
              assert.equal(await this.YraceToken.balanceOf(bob),'206');         
         }) 
+
+        it('should pay to referrer address if a user is referred by it', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1200,1300,1000, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+             await this.master.add('100', this.lp.address, true)
+             await this.lp.approve(this.master.address, '1000', { from: alice })
+             await this.lp.approve(this.master.address, '1000', { from: bob })
+ 
+             await this.master.add('100', this.lp2.address, true)
+ 
+             await time.advanceBlockTo('1199')
+             await this.master.deposit(0, 10,carol, { from: alice }) 
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+             assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
+
+             await time.advanceBlockTo('1300')
+             await this.master.withdraw(0, { from: alice })
+             await this.master.withdraw(0, { from: bob })
+
+             assert.equal(await this.YraceToken.balanceOf(alice),'252'); 
+             assert.equal(await this.YraceToken.balanceOf(bob),'247'); 
+             assert.equal(await this.YraceToken.balanceOf(carol),'5'); 
+        }) 
+
+        
+        it('should not be referred by multiple referrers', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1600,1700,1000, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+            await this.master.add('100', this.lp.address, true)
+            await this.lp.approve(this.master.address, '1000', { from: alice })
+            await this.lp.approve(this.master.address, '1000', { from: bob })
+
+            await this.master.add('100', this.lp2.address, true)
+
+            await time.advanceBlockTo('1599')
+            await this.master.deposit(0, 10,carol, { from: alice }) 
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+            await time.advanceBlockTo('1649')
+            await this.master.deposit(0, 10,dev, { from: alice })
+
+            assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
+            assert.equal(await this.YraceToken.balanceOf(dev),'0');   
+
+            await time.advanceBlockTo('1700')
+            await this.master.withdraw(0, { from: alice })
+            await this.master.withdraw(0, { from: bob })
+
+            assert.equal(await this.YraceToken.balanceOf(alice),'293'); 
+            assert.equal(await this.YraceToken.balanceOf(bob),'205'); 
+            assert.equal(await this.YraceToken.balanceOf(carol),'5');
+            assert.equal(await this.YraceToken.balanceOf(dev),'0');         
+        }) 
+
+        it('should allow withdraw after change of master address in token contract', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1800,1900,1000, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+             await this.master.add('100', this.lp.address, true)
+             await this.lp.approve(this.master.address, '1000', { from: alice })
+             await this.lp.approve(this.master.address, '1000', { from: bob })
+             await this.lp.approve(this.master.address, '1000', { from: carol })
+             await this.lp.approve(this.master.address, '1000', { from: dev })
+ 
+             await this.master.add('100', this.lp2.address, true)
+             await this.lp2.approve(this.master.address, '1000', { from: eliah })
+ 
+ 
+             // console.log(await time.latestBlock());
+             await time.advanceBlockTo('1799')
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: carol })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: dev })
+             await this.master.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })
+ 
+
+             await time.advanceBlockTo('1900')
+
+             await this.master.massUpdatePools();
+
+             await this.YraceToken.setMaster(bob, { from: alice })
+           // ----- claiming anytime after sale end (equal distribution)
+ 
+             await this.master.withdraw(0, { from: alice })
+             assert.equal(await this.YraceToken.balanceOf(alice),'130');
+ 
+             await this.master.withdraw(0, { from: bob })
+             assert.equal(await this.YraceToken.balanceOf(bob),'125');
+ 
+             await this.master.withdraw(0, { from: carol })
+             assert.equal(await this.YraceToken.balanceOf(carol),'123');
+ 
+             await this.master.withdraw(0, { from: dev })
+             assert.equal(await this.YraceToken.balanceOf(dev),'121');
+ 
+             await this.master.withdraw(1, { from: eliah })
+             assert.equal(await this.YraceToken.balanceOf(eliah),'480');           
+ 
+             // multiple withdraw (not OK)
+             await expectRevert(
+                 this.master.withdraw(0, { from: alice }),
+                 "YraceMaster: No tokens staked"
+             );
+             assert.notEqual(await this.master.seedPoolAmount(),'0');
+ 
+ 
+         })
 
     })
 })
