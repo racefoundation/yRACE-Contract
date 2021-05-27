@@ -8,7 +8,7 @@ import "./SafeMath.sol";
 import "./YraceToken.sol";
 
 
-contract YraceSeedMaster is Ownable {
+contract YraceSeedMaster is Ownable { 
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
