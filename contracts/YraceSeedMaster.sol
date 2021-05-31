@@ -276,8 +276,8 @@ contract YraceSeedMaster is Ownable {
     }
 
     function setFeeAddress(address _feeAddress) public {
-        require(msg.sender == feeAddress, "setFeeAddress: FORBIDDEN");
-        require(_feeAddress != address(0), "setFeeAddress: ZERO");
+        require(msg.sender == feeAddress, "YraceSeedMaster: forbidden from change");
+        require(_feeAddress != address(0), "YraceSeedMaster: fee address cant be zero address");
         feeAddress = _feeAddress;
     }
 }
