@@ -33,8 +33,9 @@ contract YraceSeedMaster is Ownable {
     struct PoolInfo {
         IBEP20 lpToken;          // seed pool contract address
         uint256 allocPoint;      
-        uint256 lastRewardBlock; 
-        uint256 rewardPerShare; //amount of yRace per pool token
+        uint256 lastRewardBlock;  
+        uint256 rewardPerShare;   //amount of yRace per pool token
+        uint16 depositFeeBP;      // Deposit fee in basis points
     }
 
     YraceToken public yRace;
@@ -56,6 +57,8 @@ contract YraceSeedMaster is Ownable {
     uint256 public refBonusBP = 200;
     // Max referral commission rate: 20%.
     uint16 public constant MAXIMUM_REFERRAL_BP = 2000;
+    // Deposit Fee address
+    address public feeAddress;
     // Referral Mapping
     mapping(address => address) public referrers; // account_address -> referrer_address
     mapping(address => uint256) public referredCount; // referrer_address -> num_of_referred
@@ -74,17 +77,20 @@ contract YraceSeedMaster is Ownable {
         uint256 _rewardPerBlock,
         uint256 _START_BLOCK,
         uint256 _END_BLOCK,
-        uint256 _seedPoolAmount
+        uint256 _seedPoolAmount,
+        address _feeAddress
     ){
         yRace = _yRace;
         REWARD_PER_BLOCK = _rewardPerBlock;
         START_BLOCK = _START_BLOCK;
         END_BLOCK = _END_BLOCK;
         seedPoolAmount = _seedPoolAmount;
+        feeAddress = _feeAddress;
     }
 
     // -------- For manage pool ---------
-    function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate) public onlyOwner {
+    function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
+        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         require(poolId1[address(_lpToken)] == 0, "YraceSeedMaster::add: seed pool is already in pool");
         if (_withUpdate) {
             massUpdatePools();
@@ -96,16 +102,19 @@ contract YraceSeedMaster is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            rewardPerShare: 0
+            rewardPerShare: 0,
+            depositFeeBP:_depositFeeBP
         }));
     }
 
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
+    function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
+        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         if (_withUpdate) {
             massUpdatePools();
         }
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
+        poolInfo[_pid].depositFeeBP = _depositFeeBP;
     }
 
     function massUpdatePools() public {
@@ -149,7 +158,14 @@ contract YraceSeedMaster is Ownable {
         if (_amount > 0) {
             setReferral(msg.sender, _referrer);
             pool.lpToken.safeTransferFrom(address(msg.sender),address(this),_amount);
-            user.amount = user.amount.add(_amount);
+            if (pool.depositFeeBP > 0) {
+                uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
+                pool.lpToken.safeTransfer(feeAddress, depositFee);
+                user.amount = user.amount.add(_amount).sub(depositFee);
+            } 
+            else {
+                user.amount = user.amount.add(_amount);
+            }
         }
         
         user.rewardDebt = user.amount.mul(pool.rewardPerShare).div(1e12);
@@ -257,5 +273,11 @@ contract YraceSeedMaster is Ownable {
             yRace.mint(referrer, refBonusEarned);
             emit ReferralPaid(_user, referrer, refBonusEarned);
         }
+    }
+
+    function setFeeAddress(address _feeAddress) public {
+        require(msg.sender == feeAddress, "setFeeAddress: FORBIDDEN");
+        require(_feeAddress != address(0), "setFeeAddress: ZERO");
+        feeAddress = _feeAddress;
     }
 }
