@@ -93,6 +93,13 @@ contract YraceLPMaster is Ownable {
     }
 
     // -------- For manage pool ---------
+        /**
+    *@notice Adds new seed pool to poolInfo
+    *@param _allocPoint Allocation points for pool to be added
+    *@param _lpToken Contract address of pool
+    *@param _depositFeeBP Represents deposit fee for pool in basis points
+    *@param _withUpdate If true, runs massUpdatePool()
+    */
     function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         require(poolId1[address(_lpToken)] == 0, "YraceLPMaster::add: lp pool is already in pool");
@@ -111,6 +118,13 @@ contract YraceLPMaster is Ownable {
         }));
     }
 
+    /**
+    *@notice Modifies an added seed pool
+    *@param _pid Pool ID of pool to be updated
+    *@param _allocPoint Allocation points for pool to be updated
+    *@param _depositFeeBP Deposit fee for updated pool in basis points
+    *@param _withUpdate If true, runs massUpdatePool()
+    */
     function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         if (_withUpdate) {
@@ -121,11 +135,16 @@ contract YraceLPMaster is Ownable {
         poolInfo[_pid].depositFeeBP = _depositFeeBP;
     }
 
+    /**
+    *@notice Returns number of seed pools
+    */
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
 
-    // Update reward variables for all pools. Be careful of gas spending!
+    /**
+    *@notice runs updatePool() for all pools
+    */
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for (uint256 pid = 0; pid < length; ++pid) {
@@ -133,7 +152,10 @@ contract YraceLPMaster is Ownable {
         }
     }
 
-    // Update reward variables of the given pool to be up-to-date.
+    /**
+    *@notice Mint tokens for master contract and updates pools to have latest rewardPerShare
+    *@param _pid Pool Id of pool to be updated
+    */
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
@@ -151,7 +173,12 @@ contract YraceLPMaster is Ownable {
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to Master for yRace allocation.
+    /**
+    *@notice Deposits `_amount` from user's balance to pool `_pid` 
+    *@param _pid Pool ID of pool in which amount will be deposited
+    *@param _amount Number of tokens to be deposited
+    *@param _referrer Address of the referrer, if any
+    */
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
         require(block.number>=START_BLOCK,"YraceLPMaster: Staking period has not started");
         require(_referrer == address(_referrer),"YraceLPMaster: Invalid referrer address");
@@ -183,7 +210,11 @@ contract YraceLPMaster is Ownable {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-    // Withdraw LP tokens from Master.
+    /**
+    *@notice Withdraws `_amount` tokens from pool `_pid` 
+    *@param _pid Pool ID of pool from which amount will be withdrawn
+    *@param _amount Amount to be withdrawn
+    */
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -204,7 +235,10 @@ contract YraceLPMaster is Ownable {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
-    // Withdraw without caring about rewards. EMERGENCY ONLY.
+    /**
+    *@notice Withdraw without caring about rewards. EMERGENCY ONLY.
+    *@param _pid Pool
+    */ 
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -214,7 +248,11 @@ contract YraceLPMaster is Ownable {
         user.rewardDebt = 0;
     }
 
-    // Safe yRace transfer function, just in case if rounding error causes pool to not have enough yRaces.
+    /**
+    *@notice To avoid rounding error causing pool to not have enough yRaces.
+    *@param _to Address to which amount is transferred
+    *@param _amount Amount to be transferred
+    */
     function safeTransferReward(address _to, uint256 _amount) internal {
         uint256 yRaceBal = yRace.balanceOf(address(this));
         if (_amount > yRaceBal) {
@@ -224,12 +262,22 @@ contract YraceLPMaster is Ownable {
         }
     }
 
+    /**
+    *@notice Returns amount staked by address `_user` in pool `_pid`
+    *@param _pid Pool ID
+    *@param _user User address
+    */
     function getStakedAmount(uint _pid, address _user) public view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
         return user.amount;
     }
-    // Return reward multiplier over the given _from to _to block.
-      function getMultiplier(uint256 _from, uint256 _to)public view returns (uint256)
+
+    /**
+    *@notice Returns reward multiplier over the given `_from` to `_to` block.
+    *@param _from Block number from which multiplier is to calculated
+    *@param _to Block number till which multiplier is to calculated
+    */
+    function getMultiplier(uint256 _from, uint256 _to)public view returns (uint256)
     {
         // Temporary variable for calculating rewards
         uint256 bonus = 0;
@@ -295,7 +343,11 @@ contract YraceLPMaster is Ownable {
         return 0;
     }
 
-    // View function to see pending yRaces on frontend.
+    /**
+    *@notice Returns pending rewards to be claimed for the user `_user` in pool `_pid`
+    *@param _pid Pool ID
+    *@param _user User address
+    */
     function pendingReward(uint256 _pid, address _user)external view returns (uint256)
     {
         PoolInfo storage pool = poolInfo[_pid];
@@ -310,7 +362,11 @@ contract YraceLPMaster is Ownable {
         return user.amount.mul(rewardPerShare).div(1e12).sub(user.rewardDebt);
     }
 
-    // Set Referral Address for a user
+    /**
+    *@notice Sets Referral Address for a user
+    *@param _user User address
+    *@param _referrer Referrer address
+    */
     function setReferral(address _user, address _referrer) internal {
         if (_referrer == address(_referrer) && referrers[_user] == address(0) && _referrer != address(0) && _referrer != _user) {
             referrers[_user] = _referrer;
@@ -319,12 +375,19 @@ contract YraceLPMaster is Ownable {
         }
     }
 
-    // Get Referral Address for a Account
+    /**
+    *@notice Gets Referral Address for a user
+    *@param _user User address
+    */
     function getReferral(address _user) public view returns (address) {
         return referrers[_user];
     }
 
-    // Pay referral commission to the referrer who referred this user.
+    /**
+    *@notice Pays referral commission to the referrer who referred this user.
+    *@param _user User address
+    *@param _pending Pending rewards of user
+    */
     function payReferralCommission(address _user, uint256 _pending) internal {
         address referrer = getReferral(_user);
         if (referrer != address(0) && referrer != _user && refBonusBP > 0) {
@@ -334,9 +397,10 @@ contract YraceLPMaster is Ownable {
         }
     }
     
-    // Referral Bonus in basis points.
-    // Initially set to 2%, this this the ability to increase or decrease the Bonus percentage based on
-    // community voting and feedback.
+    /**
+    *@notice Update referral bonus percentage. Can only be called by owner
+    *@param _newRefBonus New referral bonus in basis points
+    */
     function updateReferralBonusBp(uint256 _newRefBonus) public onlyOwner {
         require(_newRefBonus <= MAXIMUM_REFERRAL_BP, "YraceLPMaster : invalid referral bonus basis points");
         require(_newRefBonus != refBonusBP, "YraceLPMaster  : same bonus bp set");
@@ -345,6 +409,10 @@ contract YraceLPMaster is Ownable {
         emit ReferralBonusChanged(previousRefBonus, _newRefBonus);
     }
 
+    /**
+    *@notice Sets fee address
+    *@param _feeAddress New fee address
+    */
     function setFeeAddress(address _feeAddress) public {
         require(msg.sender == feeAddress, "YraceLPMaster: forbidden from change");
         require(_feeAddress != address(0), "YraceLPMaster: fee address cant be zero address");
