@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.3;
 
-import "./Ownable.sol";
-import "./SafeBEP20.sol";
-import "./SafeMath.sol";
+import "./mocks/Ownable.sol";
+import "./libs/SafeBEP20.sol";
+import "./libs/SafeMath.sol";
 import "./YraceToken.sol";
 
 
