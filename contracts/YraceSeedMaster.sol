@@ -46,22 +46,21 @@ contract YraceSeedMaster is Ownable {
     uint256 public START_BLOCK;
     // start of claiming period      
     uint256 public END_BLOCK;          
-
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
-    mapping(address => uint256) public poolId1; // poolId1 count from 1, subtraction 1 before using with poolInfo
-    // Info of each user that stakes LP tokens. pid => user address => info
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     //Total maximum rewards from seed pool
     uint256 public seedPoolAmount;
     // Referral Bonus in basis points. Initially set to 2% (1% = 100 BP)
     uint256 public refBonusBP = 200;
-    // Max referral commission rate: 20%.
-    uint16 public constant MAXIMUM_REFERRAL_BP = 2000;
     // Deposit Fee address
     address public feeAddress;
+
+    // Info of each pool.
+    PoolInfo[] public poolInfo;
+    // poolId1 count from 1, subtraction 1 before using with poolInfo
+    mapping(address => uint256) public poolId1; 
+    // Info of each user that stakes LP tokens. pid => user address => info
+    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Referral Mapping
     mapping(address => address) public referrers; // account_address -> referrer_address
     mapping(address => uint256) public referredCount; // referrer_address -> num_of_referred
@@ -69,11 +68,8 @@ contract YraceSeedMaster is Ownable {
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event SendReward(address indexed user, uint256 indexed pid, uint256 amount);
     event Referral(address indexed _referrer, address indexed _user);
     event ReferralPaid(address indexed _user, address indexed _userTo, uint256 _reward);
-    event ReferralBonusChanged(uint256 _old, uint256 _new);
 
     constructor(
         YraceToken _yRace,
@@ -91,6 +87,11 @@ contract YraceSeedMaster is Ownable {
         feeAddress = _feeAddress;
     }
 
+    modifier validDepositFeeBP(uint16 _depositFeeBP) {
+        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+        _;
+    }
+
     // -------- For manage pool ---------
     /**
     *@notice Adds new seed pool to poolInfo
@@ -99,8 +100,7 @@ contract YraceSeedMaster is Ownable {
     *@param _depositFeeBP Represents deposit fee for pool in basis points
     *@param _withUpdate If true, runs massUpdatePool()
     */
-    function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+    function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner validDepositFeeBP(_depositFeeBP){
         require(poolId1[address(_lpToken)] == 0, "YraceSeedMaster::add: seed pool is already in pool");
         if (_withUpdate) {
             massUpdatePools();
@@ -124,8 +124,7 @@ contract YraceSeedMaster is Ownable {
     *@param _depositFeeBP Deposit fee for updated pool in basis points
     *@param _withUpdate If true, runs massUpdatePool()
     */
-    function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+    function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner validDepositFeeBP(_depositFeeBP){
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -150,10 +149,12 @@ contract YraceSeedMaster is Ownable {
     */
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) { //won't mine until sale starts after start block
+        //won't mine until sale starts after start block
+        if (block.number <= pool.lastRewardBlock) { 
             return;
         }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this)); //total staked in pool
+        //total staked in pool
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this)); 
         if (lpSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -162,7 +163,8 @@ contract YraceSeedMaster is Ownable {
         if(yRace.yRaceMaster()==address(this))
         yRace.mint(address(this), reward);
         seedPoolAmount = seedPoolAmount.sub(reward);     
-        pool.rewardPerShare = pool.rewardPerShare.add(reward.mul(1e12).div(lpSupply)); //amount of yRace per token
+        //amount of yRace per token
+        pool.rewardPerShare = pool.rewardPerShare.add(reward.mul(1e12).div(lpSupply)); 
         pool.lastRewardBlock = block.number;
     }
 
@@ -175,7 +177,6 @@ contract YraceSeedMaster is Ownable {
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
         require(block.number>=START_BLOCK,"YraceMaster: Staking period has not started");
         require(block.number<END_BLOCK,"YraceMaster: Staking period has ended");
-        require(_referrer == address(_referrer),"YraceMaster: Invalid referrer address");
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -222,6 +223,7 @@ contract YraceSeedMaster is Ownable {
         }
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         user.amount = 0;
+        user.rewardToClaim = 0;
 
         emit Withdraw(msg.sender, _pid, user.amount);
     }

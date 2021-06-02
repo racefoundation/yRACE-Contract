@@ -43,26 +43,27 @@ contract YraceLPMaster is Ownable {
     uint256 public REWARD_PER_BLOCK;
     // Number of blocks in each stage before stage 4 (will be 200,000)
     uint256 public BLOCKS_PER_STAGE;
+    // The block number when yRace mining starts.
+    uint256 public START_BLOCK;
     // Stages start block number
     uint256 private STAGE2;
     uint256 private STAGE3;
     uint256 private STAGE4;
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
-    // poolId1 count from 1, subtraction 1 before using with poolInfo
-    mapping(address => uint256) public poolId1; 
-    // Info of each user that stakes LP tokens.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when yRace mining starts.
-    uint256 public START_BLOCK;
     // Referral Bonus in basis points. Initially set to 2%
     uint256 public refBonusBP = 200;
     // Max referral commission rate: 20%.
     uint16 public constant MAXIMUM_REFERRAL_BP = 2000;
     // Deposit Fee address
     address public feeAddress;
+
+    // Info of each pool.
+    PoolInfo[] public poolInfo;
+    // poolId1 count from 1, subtraction 1 before using with poolInfo
+    mapping(address => uint256) public poolId1; 
+    // Info of each user that stakes LP tokens.
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Referral Mapping
     mapping(address => address) public referrers; // account_address -> referrer_address
     mapping(address => uint256) public referredCount; // referrer_address -> num_of_referred
@@ -70,7 +71,6 @@ contract YraceLPMaster is Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event SendReward(address indexed user, uint256 indexed pid, uint256 amount);
     event Referral(address indexed _referrer, address indexed _user);
     event ReferralPaid(address indexed _user, address indexed _userTo, uint256 _reward);
     event ReferralBonusChanged(uint256 _old, uint256 _new);
@@ -92,16 +92,21 @@ contract YraceLPMaster is Ownable {
         feeAddress = _feeAddress;
     }
 
+
+    modifier validDepositFeeBP(uint16 _depositFeeBP) {
+        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+        _;
+    }
+
     // -------- For manage pool ---------
-        /**
+    /**
     *@notice Adds new seed pool to poolInfo
     *@param _allocPoint Allocation points for pool to be added
     *@param _lpToken Contract address of pool
     *@param _depositFeeBP Represents deposit fee for pool in basis points
     *@param _withUpdate If true, runs massUpdatePool()
     */
-    function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+    function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner validDepositFeeBP(_depositFeeBP){
         require(poolId1[address(_lpToken)] == 0, "YraceLPMaster::add: lp pool is already in pool");
         if (_withUpdate) {
             massUpdatePools();
@@ -125,8 +130,7 @@ contract YraceLPMaster is Ownable {
     *@param _depositFeeBP Deposit fee for updated pool in basis points
     *@param _withUpdate If true, runs massUpdatePool()
     */
-    function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
+    function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner validDepositFeeBP(_depositFeeBP){
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -181,7 +185,6 @@ contract YraceLPMaster is Ownable {
     */
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
         require(block.number>=START_BLOCK,"YraceLPMaster: Staking period has not started");
-        require(_referrer == address(_referrer),"YraceLPMaster: Invalid referrer address");
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
