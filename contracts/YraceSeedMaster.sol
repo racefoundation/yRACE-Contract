@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.3;
 
-import "./Ownable.sol";
-import "./SafeBEP20.sol";
-import "./SafeMath.sol";
+import "./mocks/Ownable.sol";
+import "./libs/SafeBEP20.sol";
+import "./libs/SafeMath.sol";
 import "./YraceToken.sol";
 
 
@@ -38,11 +38,14 @@ contract YraceSeedMaster is Ownable {
         uint16 depositFeeBP;      // Deposit fee in basis points
     }
 
+    // The yRace TOKEN!
     YraceToken public yRace;
-    
+    // yRace tokens created per block.
     uint256 public REWARD_PER_BLOCK;
-    uint256 public START_BLOCK;      //start of staking period
-    uint256 public END_BLOCK;          // start of claiming period
+    //start of staking period
+    uint256 public START_BLOCK;
+    // start of claiming period      
+    uint256 public END_BLOCK;          
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -89,6 +92,13 @@ contract YraceSeedMaster is Ownable {
     }
 
     // -------- For manage pool ---------
+    /**
+    *@notice Adds new seed pool to poolInfo
+    *@param _allocPoint Allocation points for pool to be added
+    *@param _lpToken Contract address of pool
+    *@param _depositFeeBP Represents deposit fee for pool in basis points
+    *@param _withUpdate If true, runs massUpdatePool()
+    */
     function add(uint256 _allocPoint, IBEP20 _lpToken,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         require(poolId1[address(_lpToken)] == 0, "YraceSeedMaster::add: seed pool is already in pool");
@@ -107,6 +117,13 @@ contract YraceSeedMaster is Ownable {
         }));
     }
 
+    /**
+    *@notice Modifies an added seed pool
+    *@param _pid Pool ID of pool to be updated
+    *@param _allocPoint Allocation points for pool to be updated
+    *@param _depositFeeBP Deposit fee for updated pool in basis points
+    *@param _withUpdate If true, runs massUpdatePool()
+    */
     function set(uint256 _pid, uint256 _allocPoint,uint16 _depositFeeBP, bool _withUpdate) public onlyOwner {
         require(_depositFeeBP <= 10000, "add: invalid deposit fee basis points");
         if (_withUpdate) {
@@ -117,6 +134,9 @@ contract YraceSeedMaster is Ownable {
         poolInfo[_pid].depositFeeBP = _depositFeeBP;
     }
 
+    /**
+    *@notice runs updatePool() for all pools
+    */
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for (uint256 pid = 0; pid < length; ++pid) {
@@ -124,6 +144,10 @@ contract YraceSeedMaster is Ownable {
         }
     }
 
+    /**
+    *@notice Mint tokens for master contract and updates pools to have latest rewardPerShare
+    *@param _pid Pool Id of pool to be updated
+    */
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) { //won't mine until sale starts after start block
@@ -142,7 +166,12 @@ contract YraceSeedMaster is Ownable {
         pool.lastRewardBlock = block.number;
     }
 
-    //Deposit Pool tokens into master contract for yRace allocation with referral.
+    /**
+    *@notice Deposits `_amount` from user's balance to pool `_pid` 
+    *@param _pid Pool ID of pool in which amount will be deposited
+    *@param _amount Number of tokens to be deposited
+    *@param _referrer Address of the referrer, if any
+    */
     function deposit(uint256 _pid, uint256 _amount, address _referrer) public {
         require(block.number>=START_BLOCK,"YraceMaster: Staking period has not started");
         require(block.number<END_BLOCK,"YraceMaster: Staking period has ended");
@@ -172,6 +201,10 @@ contract YraceSeedMaster is Ownable {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
+    /**
+    *@notice Withdraws all tokens from pool `_pid` 
+    *@param _pid Pool ID of pool from which amount will be withdrawn
+    */
     function withdraw(uint256 _pid) public {
         require(block.number>=END_BLOCK,"YraceMaster: Staking period is in progress");
         PoolInfo storage pool = poolInfo[_pid];
@@ -193,6 +226,11 @@ contract YraceSeedMaster is Ownable {
         emit Withdraw(msg.sender, _pid, user.amount);
     }
 
+    /**
+    *@notice To avoid rounding error causing pool to not have enough yRaces.
+    *@param _to Address to which amount is transferred
+    *@param _amount Amount to be transferred
+    */
     function safeTransferReward(address _to, uint256 _amount) internal {
         uint256 bal = yRace.balanceOf(address(this));
         if (_amount > bal) {
@@ -202,6 +240,11 @@ contract YraceSeedMaster is Ownable {
         }
     }
 
+    /**
+    *@notice Returns reward multiplier over the given `_from` to `_to` block.
+    *@param _from Block number from which multiplier is to calculated
+    *@param _to Block number till which multiplier is to calculated
+    */
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
 		if (_to <= START_BLOCK || _from >= _to) {
 			return 0;
@@ -224,6 +267,11 @@ contract YraceSeedMaster is Ownable {
         }
     }
 
+    /**
+    *@notice Returns amount of yRace to be minted for pool for duration of `_from` to `_to` block
+    *@param _from Block number from which multiplier is to calculated
+    *@param _to Block number till which multiplier is to calculated
+    */
     function getPoolReward(uint256 _from, uint256 _to, uint256 _allocPoint) public view returns (uint) {
         uint256 multiplier = getMultiplier(_from, _to);
         uint256 amount = multiplier.mul(REWARD_PER_BLOCK).mul(_allocPoint).div(totalAllocPoint);
@@ -231,14 +279,28 @@ contract YraceSeedMaster is Ownable {
         return amountCanMint < amount ? amountCanMint : amount;
     }
 
+    /**
+    *@notice Returns number of seed pools
+    */
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
 
+    /**
+    *@notice Returns amount staked by address `_user` in pool `_pid`
+    *@param _pid Pool ID
+    *@param _user User address
+    */
     function getStakedAmount(uint _pid, address _user) public view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
         return user.amount;
     }
+
+    /**
+    *@notice Returns total reward generated for the user `_user` in pool `_pid`
+    *@param _pid Pool ID
+    *@param _user User address
+    */
     function pendingReward(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -251,7 +313,11 @@ contract YraceSeedMaster is Ownable {
         return user.rewardToClaim + user.amount.mul(rewardPerShare).div(1e12).sub(user.rewardDebt);
     }
 
-    // Set Referral Address for a user
+    /**
+    *@notice Sets Referral Address for a user
+    *@param _user User address
+    *@param _referrer Referrer address
+    */
     function setReferral(address _user, address _referrer) internal {
         if (_referrer == address(_referrer) && referrers[_user] == address(0) && _referrer != address(0) && _referrer != _user) {
             referrers[_user] = _referrer;
@@ -260,12 +326,19 @@ contract YraceSeedMaster is Ownable {
         }
     }
 
-    // Get Referral Address for a Account
+    /**
+    *@notice Gets Referral Address for a user
+    *@param _user User address
+    */
     function getReferral(address _user) public view returns (address) {
         return referrers[_user];
     }
 
-    // Pay referral commission to the referrer who referred this user.
+    /**
+    *@notice Pays referral commission to the referrer who referred this user.
+    *@param _user User address
+    *@param _pending Pending rewards of user
+    */
     function payReferralCommission(address _user, uint256 _pending) internal {
         address referrer = getReferral(_user);
         if (referrer != address(0) && referrer != _user && refBonusBP > 0) {
@@ -275,6 +348,10 @@ contract YraceSeedMaster is Ownable {
         }
     }
 
+    /**
+    *@notice Sets fee address
+    *@param _feeAddress New fee address
+    */
     function setFeeAddress(address _feeAddress) public {
         require(msg.sender == feeAddress, "YraceSeedMaster: forbidden from change");
         require(_feeAddress != address(0), "YraceSeedMaster: fee address cant be zero address");
