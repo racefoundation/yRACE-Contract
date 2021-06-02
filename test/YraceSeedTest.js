@@ -419,5 +419,84 @@ contract('YraceSeedMaster', ([alice, bob, carol, dev, eliah, minter, feeAddress]
  
          })
 
+         it('should allow change of deposit fee', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 2000,2100,1000,feeAddress, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+             await this.master.add('100', this.lp.address,0, true)
+             await expectRevert(this.master.add('100', this.lp.address,0, true),
+                 "YraceSeedMaster::add: seed pool is already in pool"
+             )
+             await this.lp.approve(this.master.address, '1000', { from: alice })
+             await this.lp.approve(this.master.address, '1000', { from: bob })
+             await this.lp.approve(this.master.address, '1000', { from: carol })
+             await this.lp.approve(this.master.address, '1000', { from: eliah })
+             await this.lp.approve(this.master.address, '1000', { from: dev })
+ 
+             await this.master.add('100', this.lp2.address,1000, true)
+ 
+             await time.advanceBlockTo('1999')
+             await this.master.deposit(0, 100,constants.ZERO_ADDRESS, { from: alice }) 
+             await this.master.deposit(0, 100,constants.ZERO_ADDRESS, { from: bob })
+
+             await time.advanceBlockTo('2049')
+             await this.master.set(0,'100', 1000, true)
+             await this.master.deposit(0, 100,constants.ZERO_ADDRESS, { from: carol }) 
+             await this.master.deposit(0, 100,constants.ZERO_ADDRESS, { from: dev })
+
+             await time.advanceBlockTo('2100')
+             await this.master.withdraw(0, { from: alice })
+             assert.equal(await this.YraceToken.balanceOf(alice),'194');
+ 
+             await this.master.withdraw(0, { from: bob })
+             assert.equal(await this.YraceToken.balanceOf(bob),'189');         
+
+             await this.master.withdraw(0, { from: carol })
+             assert.equal(await this.YraceToken.balanceOf(carol),'58');
+ 
+             await this.master.withdraw(0, { from: dev })
+             assert.equal(await this.YraceToken.balanceOf(dev),'57');   
+
+             assert.equal((await this.lp.balanceOf(feeAddress)).valueOf(), '20')
+        })
+
+        it('should allow original fee address to change feeAddress', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 2200,2300,10000,feeAddress, { from: alice })
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+            await expectRevert(
+                this.master.setFeeAddress(dev, { from: alice }),
+                "YraceSeedMaster: forbidden from change"    
+            )
+            await expectRevert(
+                this.master.setFeeAddress(constants.ZERO_ADDRESS, { from: feeAddress }),
+                "YraceSeedMaster: fee address cant be zero address"    
+            )
+
+            await this.master.setFeeAddress(eliah, { from: feeAddress })
+            assert.equal(await this.lp.balanceOf(eliah),'1000');
+
+            await this.master.add('100', this.lp.address,1000, true)
+            await this.lp.approve(this.master.address, '1000', { from: alice })
+            await this.lp.approve(this.master.address, '1000', { from: bob })
+
+            await this.master.add('100', this.lp2.address,500, true)
+
+            await time.advanceBlockTo('2199')
+            await this.master.deposit(0, 10,carol, { from: alice }) 
+            await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+
+            await time.advanceBlockTo('2299')
+            await this.master.withdraw(0, { from: alice })
+            await this.master.withdraw(0, { from: bob })
+
+            assert.equal(await this.YraceToken.balanceOf(alice),'252'); 
+            assert.equal(await this.YraceToken.balanceOf(bob),'248'); 
+            assert.equal(await this.YraceToken.balanceOf(carol),'5');
+            assert.equal(await this.YraceToken.balanceOf(dev),'0');
+            
+            assert.equal(await this.lp.balanceOf(eliah),'1002');
+            assert.equal(await this.lp.balanceOf(feeAddress),'0');
+
+        }) 
     })
 })
