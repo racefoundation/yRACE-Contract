@@ -271,6 +271,7 @@ contract YraceSeedMaster is Ownable {
     *@notice Returns amount of yRace to be minted for pool for duration of `_from` to `_to` block
     *@param _from Block number from which multiplier is to calculated
     *@param _to Block number till which multiplier is to calculated
+    *@param _allocPoint Allocation points for the pool
     */
     function getPoolReward(uint256 _from, uint256 _to, uint256 _allocPoint) public view returns (uint) {
         uint256 multiplier = getMultiplier(_from, _to);
