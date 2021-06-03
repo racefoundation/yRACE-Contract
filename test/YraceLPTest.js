@@ -404,6 +404,8 @@ contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) =
              await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
              assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
 
+            await this.master.updateReferralBonusBp(500,{ from: alice })
+
              await time.advanceBlockTo('1450')
              await this.master.withdraw(0,5, { from: alice })
              await this.master.withdraw(0,9, { from: bob })
@@ -413,7 +415,7 @@ contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) =
 
              assert.equal(await this.YraceToken.balanceOf(alice),'3740'); 
              assert.equal(await this.YraceToken.balanceOf(bob),'1285'); 
-             assert.equal(await this.YraceToken.balanceOf(carol),'73'); 
+             assert.equal(await this.YraceToken.balanceOf(carol),'186'); 
         }) 
 
         
