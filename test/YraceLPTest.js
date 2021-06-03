@@ -1,6 +1,7 @@
 const { expectRevert, time, constants } = require('@openzeppelin/test-helpers')
 const YraceToken = artifacts.require('YraceToken')
 const YraceLPMaster = artifacts.require('YraceLPMaster')
+const YraceSeedMaster = artifacts.require('YraceSeedMaster')
 const MockBEP20 = artifacts.require('MockBEP20')
 
 contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) => {
@@ -403,6 +404,8 @@ contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) =
              await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
              assert.equal(await this.YraceToken.balanceOf(carol),'0'); 
 
+            await this.master.updateReferralBonusBp(500,{ from: alice })
+
              await time.advanceBlockTo('1450')
              await this.master.withdraw(0,5, { from: alice })
              await this.master.withdraw(0,9, { from: bob })
@@ -412,7 +415,7 @@ contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) =
 
              assert.equal(await this.YraceToken.balanceOf(alice),'3740'); 
              assert.equal(await this.YraceToken.balanceOf(bob),'1285'); 
-             assert.equal(await this.YraceToken.balanceOf(carol),'73'); 
+             assert.equal(await this.YraceToken.balanceOf(carol),'186'); 
         }) 
 
         
@@ -481,5 +484,81 @@ contract('YraceLPMaster', ([alice, bob, carol, dev, eliah, minter,feeAddress]) =
             assert.equal(await this.lp.balanceOf(eliah),'1003');
         }) 
 
+        it('should switch master from seed to LP after staking period', async () => {
+            this.master = await YraceSeedMaster.new(this.YraceToken.address, 10, 1900,2000,1000,feeAddress, { from: alice })      
+            await this.YraceToken.setMaster(this.master.address, { from: alice })
+ 
+             await this.master.add('100', this.lp.address,600, true)
+             await this.lp.approve(this.master.address, '1000', { from: alice })
+             await this.lp.approve(this.master.address, '1000', { from: bob })
+             await this.lp.approve(this.master.address, '1000', { from: carol })
+             await this.lp.approve(this.master.address, '1000', { from: dev })
+ 
+             await this.master.add('100', this.lp2.address,700, true)
+             await this.lp2.approve(this.master.address, '1000', { from: eliah })
+
+             this.master2 = await YraceLPMaster.new(this.YraceToken.address, 10, 2000,100,feeAddress, { from: alice })
+ 
+             await this.master2.add('100', this.lp.address,1000, true)
+             await this.lp.approve(this.master2.address, '1000', { from: alice })
+             await this.lp.approve(this.master2.address, '1000', { from: bob })
+             await this.lp.approve(this.master2.address, '1000', { from: carol })
+             await this.lp.approve(this.master2.address, '1000', { from: dev })
+ 
+             await this.master2.add('100', this.lp2.address,500, true)
+             await this.lp2.approve(this.master2.address, '1000', { from: eliah })
+
+            
+             await time.advanceBlockTo('1899')
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: bob })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: carol })
+             await this.master.deposit(0, 10,constants.ZERO_ADDRESS, { from: dev })
+             await this.master.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })
+
+             await time.advanceBlockTo('2000')
+
+             await this.master.massUpdatePools();
+             await this.YraceToken.setMaster(this.master2.address, { from: alice })
+ 
+             await this.master.withdraw(0, { from: alice })
+             assert.equal(await this.YraceToken.balanceOf(alice),'130');
+  
+             await this.master.withdraw(0, { from: bob })
+             assert.equal(await this.YraceToken.balanceOf(bob),'125');
+       
+             await this.master2.deposit(0, 10,constants.ZERO_ADDRESS, { from: alice })  
+             await this.master2.deposit(0, 20,constants.ZERO_ADDRESS, { from: bob })    
+             await this.master2.deposit(0, 30,constants.ZERO_ADDRESS, { from: carol })  
+             await this.master2.deposit(0, 40,constants.ZERO_ADDRESS, { from: dev })    
+             await this.master2.deposit(1, 10,constants.ZERO_ADDRESS, { from: eliah })  
+ 
+             await this.master.withdraw(0, { from: carol })
+             assert.equal(await this.YraceToken.balanceOf(carol),'123');
+ 
+             await this.master.withdraw(0, { from: dev })
+             assert.equal(await this.YraceToken.balanceOf(dev),'121');
+ 
+             await this.master.withdraw(1, { from: eliah })
+             assert.equal(await this.YraceToken.balanceOf(eliah),'480');     
+             
+             await time.advanceBlockTo('2049')
+ 
+             await this.master2.withdraw(0,9, { from: alice })            
+             assert.equal(await this.YraceToken.balanceOf(alice),'414');
+
+             await this.master2.withdraw(0,18, { from: bob })           
+             assert.equal(await this.YraceToken.balanceOf(bob),'607');
+
+             await this.master2.withdraw(0,27, { from: carol })        
+             assert.equal(await this.YraceToken.balanceOf(carol),'817');
+
+            await this.master2.withdraw(0,36, { from: dev })             
+            assert.equal(await this.YraceToken.balanceOf(dev),'1061');
+            
+            await this.master2.withdraw(1,9, { from: eliah })           
+            assert.equal(await this.YraceToken.balanceOf(eliah),'2730');
+ 
+         })
     })
 })
