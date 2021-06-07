@@ -265,8 +265,8 @@ contract YraceLPMaster is Ownable {
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount != 0, "YraceLPMaster: No tokens staked");
         require(user.amount >= _amount, "YraceLPMaster : Withdraw not good");
-        require(user.amount != 0, "YraceMaster: No tokens staked");
         updatePool(_pid);
         uint256 pending =
             user.amount.mul(pool.rewardPerShare).div(1e12).sub(user.rewardDebt);

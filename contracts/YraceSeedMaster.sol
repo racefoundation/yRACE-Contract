@@ -207,11 +207,11 @@ contract YraceSeedMaster is Ownable {
     ) public {
         require(
             block.number >= START_BLOCK,
-            "YraceMaster: Staking period has not started"
+            "YraceSeedMaster: Staking period has not started"
         );
         require(
             block.number < END_BLOCK,
-            "YraceMaster: Staking period has ended"
+            "YraceSeedMaster: Staking period has ended"
         );
 
         PoolInfo storage pool = poolInfo[_pid];
@@ -245,34 +245,58 @@ contract YraceSeedMaster is Ownable {
     }
 
     /**
-     *@notice Withdraws all tokens from pool `_pid`
+     *@notice Withdraws `_amount` nu. of tokens from pool `_pid`
      *@param _pid Pool ID of pool from which amount will be withdrawn
+     *@param _amount Amount to be withdrawn
      */
-    function withdraw(uint256 _pid) public {
-        require(
-            block.number >= END_BLOCK,
-            "YraceMaster: Staking period is in progress"
-        );
+    function withdraw(uint256 _pid,uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-
-        require(user.amount != 0, "YraceMaster: No tokens staked");
-
+        require(user.amount != 0, "YraceSeedMaster: No tokens staked");
+        require(user.amount >= _amount, "YraceSeedMaster : Withdraw not good");
         updatePool(_pid);
         uint256 pending =
             user.amount.mul(pool.rewardPerShare).div(1e12).sub(user.rewardDebt);
         user.rewardToClaim += pending;
 
+        if (_amount > 0) {
+            user.amount = user.amount.sub(_amount);
+            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.rewardPerShare).div(1e12);
+        emit Withdraw(msg.sender, _pid, user.amount);
+    }
+
+    /**
+     *@notice Withdraws all tokens from pool `_pid` and sends yRace reward tokens and staked tokens to user
+     *@param _pid Pool ID of pool from which tokens will be withdrawn
+     */
+    function harvest(uint256 _pid) public {
+        require(
+            block.number >= END_BLOCK,
+            "YraceSeedMaster: Staking period is in progress"
+        );
+
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+    
+        updatePool(_pid);
+        uint256 pending =
+            user.amount.mul(pool.rewardPerShare).div(1e12).sub(user.rewardDebt);
+        user.rewardToClaim += pending;  
+
+        require(user.rewardToClaim != 0, "YraceSeedMaster: No rewards to claim");
+
         if (user.rewardToClaim > 0) {
             safeTransferReward(msg.sender, user.rewardToClaim);
             payReferralCommission(msg.sender, user.rewardToClaim);
         }
+        
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         user.amount = 0;
         user.rewardToClaim = 0;
-
-        emit Withdraw(msg.sender, _pid, user.amount);
     }
+
 
     /**
      *@notice To avoid rounding error causing pool to not have enough yRaces.
