@@ -5,7 +5,7 @@ pragma solidity ^0.8.3;
 import "./mocks/Ownable.sol";
 import "./mocks/BEP20.sol";
 
-contract YraceToken is BEP20("yRace", "yRace"), Ownable {
+contract YraceToken is BEP20("Yrace", "Yrace"), Ownable {
     address public yRaceMaster;
 
     /**

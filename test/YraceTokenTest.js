@@ -8,8 +8,8 @@ contract('YraceToken',function([alice,bob,carol,minter,presale]){
     })
 
     it('should have correct setting', async () => {
-        assert.equal(await this.YraceToken.name().valueOf(), 'yRace')
-        assert.equal(await this.YraceToken.symbol().valueOf(), 'yRace')
+        assert.equal(await this.YraceToken.name().valueOf(), 'Yrace')
+        assert.equal(await this.YraceToken.symbol().valueOf(), 'Yrace')
         assert.equal(await this.YraceToken.decimals().valueOf(), '18')
     })
     
