@@ -295,6 +295,7 @@ contract YraceSeedMaster is Ownable {
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         user.amount = 0;
         user.rewardToClaim = 0;
+        user.rewardDebt = 0;
     }
 
 
