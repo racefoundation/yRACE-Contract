@@ -11,7 +11,7 @@ contract EraceMaster is Ownable {
     using SafeBEP20 for IBEP20;
 
     struct UserInfo {
-        uint256 amount; // How many LP tokens the user has provided.
+        uint256 amount; // How many yRace tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 rewardToClaim; //Total reward to be claimed
         //
@@ -20,7 +20,7 @@ contract EraceMaster is Ownable {
         //
         //   pending reward = (user.amount * YracePool.rewardPerShare) - user.rewardDebt
 
-        // Whenever a user deposits tokens to a seed YracePool. Here's what happens:
+        // Whenever a user deposits tokens to the YracePool. Here's what happens:
         //   1. The YracePool's `rewardPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User.s pending rewards is added to user's 'rewardToClaim'
         //   3. User's `amount` gets updated.
@@ -44,7 +44,7 @@ contract EraceMaster is Ownable {
     uint256 public END_BLOCK;
     // Info of YracePool.
     PoolInfo public YracePool;
-    // Info of each user that stakes LP tokens. ser address => info
+    // Info of each user that stakes LP tokens. user address => info
     mapping(address => UserInfo) public userInfo;
 
     event Deposit(address indexed user, uint256 amount);
